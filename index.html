@@ -702,8 +702,11 @@ function Research({ apiKey, onNeedApiKey }) {
         `Recherche approfondie: "${query}". Type: ${selType?.label||"personnalisée"}. Zone géographique: ${selZone?.label||"—"}. Donne des résultats RÉELS et DÉTAILLÉS avec contacts nominatifs, coordonnées, liens LinkedIn, sites web, détails des offres. Sois précis et actionnable pour une prospection B2B achats.`
       );
       let parsed;
-      try{parsed=JSON.parse(text.replace(/```json\n?|\n?```|\'\'\'json\n?|\n?\'\'\'/g,"").replace(/^[\s\S]*?({)/,"$1").replace(/}[\s\S]*$/,"}").trim());}
-      catch{parsed={titre:query,resume:text,resultats:[],conseils:[]};}
+      try{
+        const s=text.indexOf("{");const e=text.lastIndexOf("}");
+        if(s>=0&&e>s){parsed=JSON.parse(text.slice(s,e+1));}
+        else{throw new Error("no json");}
+      }catch{parsed={titre:query,resume:text.slice(0,200),resultats:[],conseils:["Veuillez relancer la recherche"]}}
       setResult(parsed);
       setHistory(h=>[{q:query.slice(0,40),t:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})},...h.slice(0,4)]);
     } catch(e){setError(e.message);}
