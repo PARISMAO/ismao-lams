@@ -518,7 +518,7 @@ function Dashboard({ prospects, onNav }) {
   );
 }
 
-const EMPTY_FORM={company:"",contact:"",role:"",sector:"Industrie",category:"CAC 40",status:"À contacter",priority:3,lastContact:"",nextAction:"",notes:""};
+const EMPTY_FORM={company:"",contact:"",email:"",role:"",sector:"Industrie",category:"CAC 40",status:"À contacter",priority:3,lastContact:"",nextAction:"",notes:""};
 
 function Prospects({ prospects, onUpdate }) {
   const [q,setQ]=useState("");
@@ -565,7 +565,7 @@ function Prospects({ prospects, onUpdate }) {
                 <div style={{width:32,height:32,borderRadius:"50%",background:"#EDE9FE",color:"#7C3AED",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,flexShrink:0}}>{p.company[0]}</div>
                 <div><div style={{fontWeight:600,fontSize:14}}>{p.company}</div><div style={{fontSize:11,color:"#9CA3AF"}}>{p.category}</div></div>
               </div></td>
-              <td style={{padding:"14px 16px"}}><div style={{fontWeight:500}}>{p.contact}</div><div style={{fontSize:12,color:"#9CA3AF"}}>{p.role}</div></td>
+              <td style={{padding:"14px 16px"}}><div style={{fontWeight:500}}>{p.contact}</div><div style={{fontSize:12,color:"#9CA3AF"}}>{p.role}</div>{p.email&&<div style={{fontSize:11,color:"#7C3AED"}}>{p.email}</div>}</td>
               <td style={{padding:"14px 16px",color:"#374151"}}>{p.sector}</td>
               <td style={{padding:"14px 16px"}} onClick={e=>e.stopPropagation()}>
                 <select value={p.status} onChange={e=>onUpdate(prospects.map(x=>x.id===p.id?{...x,status:e.target.value}:x))}
@@ -586,6 +586,7 @@ function Prospects({ prospects, onUpdate }) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               <Inp lbl="Entreprise *" val={form.company} onChange={F("company")} full={true}/>
               <Inp lbl="Contact" val={form.contact} onChange={F("contact")}/>
+              <Inp lbl="Email" val={form.email||""} onChange={F("email")} type="email" full={true} ph="contact@entreprise.com"/>
               <Inp lbl="Rôle / Poste" val={form.role} onChange={F("role")}/>
               <Sel lbl="Secteur" val={form.sector} onChange={F("sector")} opts={SECTORS}/>
               <Sel lbl="Catégorie" val={form.category} onChange={F("category")} opts={CATEGORIES}/>
@@ -827,7 +828,7 @@ function Generator({ prospects, apiKey, onNeedApiKey }) {
     try{
       const text=await callAI(apiKey,
         "Tu es ISMAO, assistant IA de LAMS Consulting. Rédige des messages de prospection professionnels en français. Ne réponds qu'avec le message.",
-        `Rédige un ${labels[msgType]} pour:\n- Entreprise: ${p.company} (${p.category}, secteur ${p.sector})\n- Contact: ${p.contact}, ${p.role}\n- Statut: ${p.status}\n- Prochaine action: ${p.nextAction||"non définie"}`
+        `Rédige un ${labels[msgType]} pour:\n- Entreprise: ${p.company} (${p.category}, secteur ${p.sector})\n- Contact: ${p.contact}, ${p.role}${p.email?" — "+p.email:""}\n- Statut: ${p.status}\n- Prochaine action: ${p.nextAction||"non définie"}`
       );
       setMsg(text);
     } catch(e){setError(e.message);}
@@ -863,7 +864,9 @@ function Generator({ prospects, apiKey, onNeedApiKey }) {
             </select>
             {p&&(<div style={{background:"#F9FAFB",borderRadius:8,padding:14,marginTop:12}}>
               <div style={{fontWeight:700,marginBottom:2}}>{p.company}</div>
-              <div style={{color:"#6B7280",fontSize:13,marginBottom:8}}>{p.contact} · {p.role}</div>
+              <div style={{color:"#6B7280",fontSize:13,marginBottom:4}}>{p.contact} · {p.role}</div>
+              {p.email&&<div style={{fontSize:12,color:"#7C3AED",marginBottom:8}}>✉️ {p.email}</div>}
+              {!p.email&&<div style={{fontSize:11,color:"#F59E0B",marginBottom:8}}>⚠ Pas d'email — ajoutez-en un dans la fiche prospect</div>}
               <Badge status={p.status}/>
               {p.nextAction&&<div style={{marginTop:8,fontSize:12,color:"#7C3AED"}}>→ {p.nextAction}</div>}
             </div>)}
@@ -887,7 +890,32 @@ function Generator({ prospects, apiKey, onNeedApiKey }) {
         <div style={{background:"#fff",borderRadius:12,padding:24,boxShadow:"0 1px 3px rgba(0,0,0,0.08)",minHeight:300}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontWeight:600,fontSize:15}}>Message généré</div>
-            {msg&&<button onClick={copy} style={{padding:"6px 14px",background:copied?"#ECFDF5":"#F5F3FF",color:copied?"#059669":"#7C3AED",border:`1px solid ${copied?"#10B981":"#7C3AED"}`,borderRadius:6,cursor:"pointer",fontSize:13,fontWeight:500}}>{copied?"✓ Copié !":"📋 Copier"}</button>}
+            {msg&&(
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              <button onClick={copy} style={{padding:"6px 12px",background:copied?"#ECFDF5":"#F5F3FF",color:copied?"#059669":"#7C3AED",border:`1px solid ${copied?"#10B981":"#7C3AED"}`,borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:600}}>
+                {copied?"✓ Copié !":"📋 Copier"}
+              </button>
+              {p?.email&&<a
+                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(p.email)}&su=${encodeURIComponent("LAMS Consulting — Proposition de collaboration")}&body=${encodeURIComponent(msg)}`}
+                target="_blank" rel="noreferrer"
+                style={{padding:"6px 12px",background:"#FEF2F2",color:"#DC2626",border:"1px solid #FECACA",borderRadius:6,fontSize:12,fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:3}}>
+                📧 Gmail
+              </a>}
+              {p?.email&&<a
+                href={`https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(p.email)}&subject=${encodeURIComponent("LAMS Consulting — Proposition de collaboration")}&body=${encodeURIComponent(msg)}`}
+                target="_blank" rel="noreferrer"
+                style={{padding:"6px 12px",background:"#EFF6FF",color:"#2563EB",border:"1px solid #BFDBFE",borderRadius:6,fontSize:12,fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:3}}>
+                ✉️ Outlook
+              </a>}
+              {p?.email&&<a
+                href={`https://email.ionos.fr/#app=io.ox/mail&action=compose&to=${encodeURIComponent(p.email)}&subject=${encodeURIComponent("LAMS Consulting — Proposition de collaboration")}&body=${encodeURIComponent(msg)}`}
+                target="_blank" rel="noreferrer"
+                style={{padding:"6px 12px",background:"#FFF7ED",color:"#EA580C",border:"1px solid #FED7AA",borderRadius:6,fontSize:12,fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:3}}>
+                🟠 IONOS
+              </a>}
+              {!p?.email&&<span style={{fontSize:11,color:"#F59E0B",padding:"6px 0"}}>⚠ Ajoutez un email dans la fiche prospect pour envoyer</span>}
+            </div>
+          )}
           </div>
           {error&&<div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:8,padding:"12px 16px",color:"#DC2626",marginBottom:12,fontSize:14}}>{error}</div>}
           {loading&&<div style={{textAlign:"center",padding:"60px 0",color:"#9CA3AF"}}><div style={{fontSize:32,marginBottom:10}}>✍️</div><div>L'IA rédige votre message...</div></div>}
