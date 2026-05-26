@@ -699,15 +699,14 @@ function Research({ apiKey, onNeedApiKey }) {
     if(!apiKey){onNeedApiKey();return;}
     setLoading(true);setError("");setResult(null);
     try{
-      const text=await callAI(apiKey,
-        `Tu es ISMAO, assistant de prospection pour LAMS Consulting (conseil achats B2B). Génère un JSON avec ce format exact: {"titre":"...","resume":"...","resultats":[{"titre":"...","description":"...","source":"...","pertinence":"haute|moyenne|faible"}],"conseils":["..."]}`,
-        `Veille: "${query}". Zone: ${selZone?.label||"—"}. MAXIMUM 3 résultats. Chaque description max 100 mots. JSON ultra-compact.`,
-        "{",
-        4000
-      );
-      const fullText = "{" + text;
-      let parsed;
-      try{const _e=fullText.lastIndexOf("}");parsed=JSON.parse(_e>=0?fullText.slice(0,_e+1):fullText);}catch(ex){parsed={titre:query,resume:"Erreur: "+String(ex).slice(0,80),resultats:[],conseils:[]}}
+      const headers={"Content-Type":"application/json","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+      if(apiKey)headers["x-api-key"]=apiKey;
+      const tools=[{name:"veille",description:"Résultats de veille B2B",input_schema:{type:"object",required:["titre","resume","resultats","conseils"],properties:{titre:{type:"string"},resume:{type:"string"},resultats:{type:"array",items:{type:"object",properties:{titre:{type:"string"},description:{type:"string"},source:{type:"string"},pertinence:{type:"string",enum:["haute","moyenne","faible"]}}}},conseils:{type:"array",items:{type:"string"}}}}}];
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:2000,system:"Tu es ISMAO, assistant de prospection B2B pour LAMS Consulting. Utilise l'outil veille pour structurer ta réponse. Maximum 4 résultats.",messages:[{role:"user",content:`Veille: "${query}". Zone: ${selZone?.label||"—"}. Type: ${selType?.label||"personnalisée"}. Donne 3-4 résultats pertinents.`}],tools,tool_choice:{type:"any"}})});
+      if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||"Erreur HTTP "+res.status);}
+      const data=await res.json();
+      const toolUse=data.content.find(b=>b.type==="tool_use");
+      const parsed=toolUse?toolUse.input:{titre:query,resume:"Aucun résultat",resultats:[],conseils:[]};
       setResult(parsed);
       setHistory(h=>[{q:query.slice(0,40),t:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})},...h.slice(0,4)]);
     } catch(e){setError(e.message);}
