@@ -95,10 +95,12 @@ const stor = {
   set(k, v) { _mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 
-async function callAI(apiKey, system, userMsg) {
+async function callAI(apiKey, system, userMsg, prefill) {
   const headers = { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
   if (apiKey) headers["x-api-key"] = apiKey;
-  const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, system, messages: [{ role: "user", content: userMsg }] }) });
+  const messages = [{ role: "user", content: userMsg }];
+  if (prefill) messages.push({ role: "assistant", content: prefill });
+  const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, system, messages }) });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || "Erreur HTTP " + res.status); }
   const data = await res.json();
   return data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
@@ -698,11 +700,13 @@ function Research({ apiKey, onNeedApiKey }) {
     setLoading(true);setError("");setResult(null);
     try{
       const text=await callAI(apiKey,
-        `Tu es ISMAO, assistant de prospection pour LAMS Consulting (conseil achats B2B). Réponds UNIQUEMENT en JSON valide sans markdown: {"titre":"string","resume":"string","resultats":[{"titre":"string","description":"string","source":"string","pertinence":"haute|moyenne|faible"}],"conseils":["string"]}`,
-        `Veille: "${query}". Type: ${selType?.label||"personnalisée"}. Zone: ${selZone?.label||"—"}. Résultats réalistes et détaillés pour prospection achats.`
+        `Tu es ISMAO, assistant de prospection pour LAMS Consulting (conseil achats B2B). Génère un JSON avec ce format exact: {"titre":"...","resume":"...","resultats":[{"titre":"...","description":"...","source":"...","pertinence":"haute|moyenne|faible"}],"conseils":["..."]}`,
+        `Veille: "${query}". Type: ${selType?.label||"personnalisée"}. Zone: ${selZone?.label||"—"}. Résultats réalistes et détaillés pour prospection achats.`,
+        "{"
       );
+      const fullText = "{" + text;
       let parsed;
-      try{const _s=text.indexOf("{"),_e=text.lastIndexOf("}");parsed=JSON.parse(_s>=0&&_e>_s?text.slice(_s,_e+1):text);}catch(ex){parsed={titre:query,resume:"Relancez la recherche",resultats:[],conseils:[]}}
+      try{const _e=fullText.lastIndexOf("}");parsed=JSON.parse(_e>=0?fullText.slice(0,_e+1):fullText);}catch(ex){parsed={titre:query,resume:"Erreur: "+String(ex).slice(0,80),resultats:[],conseils:[]}}
       setResult(parsed);
       setHistory(h=>[{q:query.slice(0,40),t:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})},...h.slice(0,4)]);
     } catch(e){setError(e.message);}
