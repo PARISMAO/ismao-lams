@@ -702,7 +702,7 @@ function Research({ apiKey, onNeedApiKey }) {
         `Veille: "${query}". Type: ${selType?.label||"personnalisée"}. Zone: ${selZone?.label||"—"}. Résultats réalistes et détaillés pour prospection achats.`
       );
       let parsed;
-      try{parsed=JSON.parse(text.replace(/```json\n?|\n?```/g,"").trim());}catch{parsed={titre:query,resume:text,resultats:[],conseils:[]}}
+      try{const _s=text.indexOf("{"),_e=text.lastIndexOf("}");parsed=JSON.parse(_s>=0&&_e>_s?text.slice(_s,_e+1):text);}catch(ex){parsed={titre:query,resume:"Relancez la recherche",resultats:[],conseils:[]}}
       setResult(parsed);
       setHistory(h=>[{q:query.slice(0,40),t:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})},...h.slice(0,4)]);
     } catch(e){setError(e.message);}
