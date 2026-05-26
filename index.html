@@ -701,9 +701,9 @@ function Research({ apiKey, onNeedApiKey }) {
     try{
       const text=await callAI(apiKey,
         `Tu es ISMAO, assistant de prospection pour LAMS Consulting (conseil achats B2B). Génère un JSON avec ce format exact: {"titre":"...","resume":"...","resultats":[{"titre":"...","description":"...","source":"...","pertinence":"haute|moyenne|faible"}],"conseils":["..."]}`,
-        `Veille: "${query}". Type: ${selType?.label||"personnalisée"}. Zone: ${selZone?.label||"—"}. Maximum 5 résultats concis. JSON compact sans espaces superflus.`,
+        `Veille: "${query}". Zone: ${selZone?.label||"—"}. MAXIMUM 3 résultats. Chaque description max 100 mots. JSON ultra-compact.`,
         "{",
-        2000
+        4000
       );
       const fullText = "{" + text;
       let parsed;
