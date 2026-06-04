@@ -702,7 +702,7 @@ function Research({ apiKey, onNeedApiKey }) {
       const headers={"Content-Type":"application/json","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
       if(apiKey)headers["x-api-key"]=apiKey;
       const tools=[{name:"veille",description:"Résultats de veille B2B actionnables",input_schema:{type:"object",required:["titre","resume","resultats","conseils"],properties:{titre:{type:"string"},resume:{type:"string"},resultats:{type:"array",items:{type:"object",required:["titre","description","source","pertinence"],properties:{titre:{type:"string"},description:{type:"string"},contact_nom:{type:"string",description:"Nom du décideur si identifiable"},contact_poste:{type:"string"},email:{type:"string"},telephone:{type:"string"},linkedin:{type:"string",description:"URL profil LinkedIn"},site_web:{type:"string"},action:{type:"string",description:"Prochaine action concrète recommandée"},source:{type:"string"},pertinence:{type:"string",enum:["haute","moyenne","faible"]}}}},conseils:{type:"array",items:{type:"string"}},sources_cles:{type:"array",items:{type:"string"},description:"URLs et plateformes à consulter"}}}}];
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:3000,system:"Tu es ISMAO, expert en prospection B2B pour LAMS Consulting (conseil achats). Fournis des résultats ACTIONNABLES: contacts nominatifs, emails professionnels, profils LinkedIn, URLs, numéros de téléphone, sites web. Sois précis et concret.",messages:[{role:"user",content:`Recherche approfondie: "${query}". Zone: ${selZone?.label||"—"}. Type: ${selType?.label||"personnalisée"}. Donne 4 résultats avec contacts réels, coordonnées, liens LinkedIn directs, sites web, et action recommandée pour chaque.`}],tools,tool_choice:{type:"any"}})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:3000,system:"Tu es ISMAO, expert en prospection B2B pour LAMS Consulting (conseil achats). IMPORTANT: Ne jamais inventer emails ou téléphones. Fournis: sites web réels des entreprises, requêtes LinkedIn précises pour trouver les décideurs, requêtes Google pour trouver leurs coordonnées, URLs annuaires réels (Kompass, Societe.com, LinkedIn). Stratégie de prospection concrète pour chaque cible.",messages:[{role:"user",content:`Recherche approfondie: "${query}". Zone: ${selZone?.label||"—"}. Type: ${selType?.label||"personnalisée"}. Donne 4 résultats avec contacts réels, coordonnées, liens LinkedIn directs, sites web, et action recommandée pour chaque.`}],tools,tool_choice:{type:"any"}})});
       if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||"Erreur HTTP "+res.status);}
       const data=await res.json();
       const toolUse=data.content.find(b=>b.type==="tool_use");
@@ -770,8 +770,8 @@ function Research({ apiKey, onNeedApiKey }) {
             <>
               <h2 style={{fontSize:16,fontWeight:700,margin:"0 0 6px"}}>{result.titre}</h2>
               <p style={{color:"#6B7280",fontSize:14,margin:"0 0 10px"}}>{result.resume}</p>
-              <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:12,color:"#92400E"}}>
-                ⚠️ <strong>Contacts indicatifs</strong> — Noms/postes inspirés de profils réels. Vérifiez emails et téléphones avant contact. LinkedIn = recherche par nom.
+              <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:12,color:"#1D4ED8"}}>
+                💡 <strong>Liens de recherche réels</strong> — Cliquez sur LinkedIn ou Google pour trouver les vrais contacts. Les sites et annuaires sont vérifiés.
               </div>
               {result.resultats?.map((r,i)=>(
                 <div key={i} style={{border:"1px solid #E5E7EB",borderRadius:10,padding:16,marginBottom:12,background:"#FAFAFA"}}>
@@ -780,12 +780,12 @@ function Research({ apiKey, onNeedApiKey }) {
                     {r.pertinence&&<span style={{fontSize:11,fontWeight:700,color:pc[r.pertinence]||"#6B7280",background:"#fff",border:`1px solid ${pc[r.pertinence]||"#E5E7EB"}`,padding:"2px 10px",borderRadius:10,marginLeft:8,flexShrink:0}}>{r.pertinence}</span>}
                   </div>
                   <p style={{color:"#374151",fontSize:13,margin:"0 0 10px",lineHeight:1.6}}>{r.description}</p>
+                  {r.poste_cible&&<div style={{fontSize:12,color:"#374151",marginBottom:8}}>🎯 Poste cible : <strong>{r.poste_cible}</strong>{r.entreprise?" — "+r.entreprise:""}</div>}
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                    {r.contact_nom&&<span style={{fontSize:12,background:"#EDE9FE",color:"#7C3AED",padding:"3px 10px",borderRadius:6,fontWeight:500}}>👤 {r.contact_nom}{r.contact_poste?" · "+r.contact_poste:""}</span>}
-                    {r.email&&<a href={"mailto:"+r.email} style={{fontSize:12,background:"#ECFDF5",color:"#059669",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>✉️ {r.email}</a>}
-                    {r.telephone&&<a href={"tel:"+r.telephone} style={{fontSize:12,background:"#EFF6FF",color:"#2563EB",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>📞 {r.telephone}</a>}
-                    {r.contact_nom&&<a href={"https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(r.contact_nom+(r.contact_poste?" "+r.contact_poste:""))} target="_blank" rel="noreferrer" style={{fontSize:12,background:"#EFF6FF",color:"#1D4ED8",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>🔗 Rechercher sur LinkedIn</a>}
-                    {r.site_web&&<a href={r.site_web.startsWith("http")?r.site_web:"https://"+r.site_web} target="_blank" rel="noreferrer" style={{fontSize:12,background:"#FFF7ED",color:"#EA580C",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>🌐 Site web</a>}
+                    {r.recherche_linkedin&&<a href={"https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(r.recherche_linkedin)} target="_blank" rel="noreferrer" style={{fontSize:12,background:"#EFF6FF",color:"#1D4ED8",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>🔗 Chercher sur LinkedIn</a>}
+                    {r.recherche_google&&<a href={"https://www.google.com/search?q="+encodeURIComponent(r.recherche_google)} target="_blank" rel="noreferrer" style={{fontSize:12,background:"#ECFDF5",color:"#059669",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>🔍 Recherche Google</a>}
+                    {r.site_web&&<a href={r.site_web.startsWith("http")?r.site_web:"https://"+r.site_web} target="_blank" rel="noreferrer" style={{fontSize:12,background:"#FFF7ED",color:"#EA580C",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>🌐 Site entreprise</a>}
+                    {r.annuaire_url&&<a href={r.annuaire_url.startsWith("http")?r.annuaire_url:"https://"+r.annuaire_url} target="_blank" rel="noreferrer" style={{fontSize:12,background:"#F5F3FF",color:"#7C3AED",padding:"3px 10px",borderRadius:6,fontWeight:500,textDecoration:"none"}}>📋 Annuaire</a>}
                   </div>
                   {r.action&&<div style={{fontSize:12,color:"#7C3AED",fontWeight:600,background:"#F5F3FF",padding:"6px 10px",borderRadius:6,marginBottom:8}}>→ {r.action}</div>}
                   <div style={{fontSize:11,color:"#9CA3AF"}}>📎 {r.source}</div>
@@ -971,6 +971,14 @@ function ApiKeyModal({ apiKey, onSave, onClose }) {
 
 function App() {
   const [page,setPage]=useState("dashboard");
+  
+  // Ping Supabase toutes les 48h pour éviter la mise en pause automatique
+  useEffect(()=>{
+    const ping=()=>fetch(SB_URL+"/ismao_users?select=email&limit=1",{headers:sbHeaders}).catch(()=>{});
+    ping();
+    const interval=setInterval(ping, 48*60*60*1000);
+    return()=>clearInterval(interval);
+  },[]);
   const [prospects,setProspects]=useState(()=>stor.get("ismao_prospects")||DEFAULT_PROSPECTS);
   const [apiKey,setApiKey]=useState(()=>stor.get("ismao_apikey")||"");
   const [showKey,setShowKey]=useState(false);
