@@ -226,12 +226,14 @@ function AdminPage({ currentUser, apiKey, onOpenApiKey }) {
   const [myPwd,setMyPwd]=useState({current:"",next:"",confirm:""});
   const [msg,setMsg]=useState({text:"",ok:true});
   const [adminPwd,setAdminPwd]=useState("");
+  const [confirmed,setConfirmed]=useState(false);
 
   const reload=async(pwd)=>{
     try{
       const data=await sbAdminListUsers(currentUser.email,pwd||adminPwd);
       setUsers(data||[]);
-    } catch(e){ flash(e.message,false); }
+      setConfirmed(true);
+    } catch(e){ flash(e.message,false); setConfirmed(false); }
     setLoading2(false);
   };
 
@@ -276,6 +278,7 @@ function AdminPage({ currentUser, apiKey, onOpenApiKey }) {
     try{
       await sbChangePassword(currentUser.email,myPwd.current,myPwd.next);
       setAdminPwd(myPwd.next);
+      setConfirmed(true);
       setMyPwd({current:"",next:"",confirm:""});flash("✓ Mot de passe modifié !");
     } catch(e){ flash(e.message,false); }
   };
@@ -302,7 +305,7 @@ function AdminPage({ currentUser, apiKey, onOpenApiKey }) {
       </div>
       {msg.text&&<div style={{padding:"10px 16px",borderRadius:8,background:msg.ok?"#ECFDF5":"#FEF2F2",color:msg.ok?"#059669":"#DC2626",fontSize:13,fontWeight:500,marginBottom:16}}>{msg.text}</div>}
 
-      {!adminPwd&&tab!=="password"&&(
+      {!confirmed&&tab!=="password"&&(
         <div style={{background:"#FEF3C7",border:"1px solid #FDE68A",borderRadius:10,padding:16,marginBottom:16}}>
           <div style={{fontWeight:600,marginBottom:8,color:"#92400E"}}>Confirmez votre mot de passe pour gérer les comptes</div>
           <div style={{display:"flex",gap:8}}>
@@ -313,7 +316,7 @@ function AdminPage({ currentUser, apiKey, onOpenApiKey }) {
         </div>
       )}
 
-      {tab==="users"&&adminPwd&&(
+      {tab==="users"&&confirmed&&(
         <div style={{background:"#fff",borderRadius:12,boxShadow:"0 1px 3px rgba(0,0,0,0.08)",overflow:"hidden"}}>
           {loading2&&<div style={{padding:"20px",textAlign:"center",color:"#6B7280",fontSize:13}}>⏳ Chargement...</div>}
           {!loading2&&(
@@ -350,7 +353,7 @@ function AdminPage({ currentUser, apiKey, onOpenApiKey }) {
         </div>
       )}
 
-      {tab==="add"&&adminPwd&&(
+      {tab==="add"&&confirmed&&(
         <div style={{background:"#fff",borderRadius:12,padding:24,boxShadow:"0 1px 3px rgba(0,0,0,0.08)",maxWidth:460}}>
           <h2 style={{fontSize:17,fontWeight:700,margin:"0 0 20px"}}>Créer un nouveau compte</h2>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
