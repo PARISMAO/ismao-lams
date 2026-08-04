@@ -96,11 +96,10 @@ const stor = {
 };
 
 async function callAI(apiKey, system, userMsg, prefill, maxTok) {
-  const headers = { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
-  if (apiKey) headers["x-api-key"] = apiKey;
+  const headers = { "Content-Type": "application/json" };
   const messages = [{ role: "user", content: userMsg }];
   if (prefill) messages.push({ role: "assistant", content: prefill });
-  const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: maxTok||1000, system, messages }) });
+  const res = await fetch("https://ywzjfxrxsqrgznnnnkzx.supabase.co/functions/v1/claude-relay", { method: "POST", headers, body: JSON.stringify({ system, messages, max_tokens: maxTok }) });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || "Erreur HTTP " + res.status); }
   const data = await res.json();
   return data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
@@ -694,10 +693,9 @@ function Research({ apiKey, onNeedApiKey }) {
     if(!apiKey){onNeedApiKey();return;}
     setLoading(true);setError("");setResult(null);
     try{
-      const headers={"Content-Type":"application/json","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
-      if(apiKey)headers["x-api-key"]=apiKey;
+      const headers={"Content-Type":"application/json"};
       const tools=[{name:"veille",description:"Résultats de veille B2B actionnables",input_schema:{type:"object",required:["titre","resume","resultats","conseils"],properties:{titre:{type:"string"},resume:{type:"string"},resultats:{type:"array",items:{type:"object",required:["titre","description","source","pertinence"],properties:{titre:{type:"string"},description:{type:"string"},contact_nom:{type:"string",description:"Nom du décideur si identifiable"},contact_poste:{type:"string"},email:{type:"string"},telephone:{type:"string"},linkedin:{type:"string",description:"URL profil LinkedIn"},site_web:{type:"string"},action:{type:"string",description:"Prochaine action concrète recommandée"},source:{type:"string"},pertinence:{type:"string",enum:["haute","moyenne","faible"]}}}},conseils:{type:"array",items:{type:"string"}},sources_cles:{type:"array",items:{type:"string"},description:"URLs et plateformes à consulter"}}}}];
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:3000,system:"Tu es ISMAO, expert en prospection B2B pour LAMS Consulting (conseil achats). IMPORTANT: Ne jamais inventer emails ou téléphones. Fournis: sites web réels des entreprises, requêtes LinkedIn précises pour trouver les décideurs, requêtes Google pour trouver leurs coordonnées, URLs annuaires réels (Kompass, Societe.com, LinkedIn). Stratégie de prospection concrète pour chaque cible.",messages:[{role:"user",content:`Recherche approfondie: "${query}". Zone: ${selZone?.label||"—"}. Type: ${selType?.label||"personnalisée"}. Donne 4 résultats avec contacts réels, coordonnées, liens LinkedIn directs, sites web, et action recommandée pour chaque.`}],tools,tool_choice:{type:"any"}})});
+      const res=await fetch("https://ywzjfxrxsqrgznnnnkzx.supabase.co/functions/v1/claude-relay",{method:"POST",headers,body:JSON.stringify({max_tokens:3000,system:"Tu es ISMAO, expert en prospection B2B pour LAMS Consulting (conseil achats). IMPORTANT: Ne jamais inventer emails ou téléphones. Fournis: sites web réels des entreprises, requêtes LinkedIn précises pour trouver les décideurs, requêtes Google pour trouver leurs coordonnées, URLs annuaires réels (Kompass, Societe.com, LinkedIn). Stratégie de prospection concrète pour chaque cible.",messages:[{role:"user",content:`Recherche approfondie: "${query}". Zone: ${selZone?.label||"—"}. Type: ${selType?.label||"personnalisée"}. Donne 4 résultats avec contacts réels, coordonnées, liens LinkedIn directs, sites web, et action recommandée pour chaque.`}],tools,tool_choice:{type:"any"}})});
       if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||"Erreur HTTP "+res.status);}
       const data=await res.json();
       const toolUse=data.content.find(b=>b.type==="tool_use");
